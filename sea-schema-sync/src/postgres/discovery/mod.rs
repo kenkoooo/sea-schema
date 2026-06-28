@@ -3,11 +3,12 @@
 use crate::debug_print;
 use crate::postgres::def::*;
 use crate::postgres::parser::{
-    parse_table_constraint_query_results, parse_unique_index_query_results,
+    parse_foreign_key_query_results, parse_table_constraint_query_results,
+    parse_unique_index_query_results,
 };
 use crate::postgres::query::{
-    ColumnQueryResult, EnumQueryResult, SchemaQueryBuilder, TableConstraintsQueryResult,
-    TableQueryResult, UniqueIndexQueryResult,
+    ColumnQueryResult, EnumQueryResult, ForeignKeyQueryResult, SchemaQueryBuilder,
+    TableConstraintsQueryResult, TableQueryResult, UniqueIndexQueryResult,
 };
 use crate::{
     Connection,
@@ -185,7 +186,27 @@ impl SchemaDiscovery {
             })
             .collect();
 
-        let results = parse_table_constraint_query_results(results);
+        // Checks, primary keys and uniques come from `information_schema`;
+        // foreign keys are discovered from `pg_constraint` (below), which keeps
+        // the local-to-referenced column pairing intact even when the key
+        // references a bare unique index.
+        let mut results = parse_table_constraint_query_results(results);
+
+        let foreign_key_rows = conn.query_all_raw(
+            self.query
+                .query_table_references(&schema.to_string(), &table.to_string()),
+        )?;
+        let foreign_key_results = foreign_key_rows
+            .into_iter()
+            .map(|row| {
+                let result: ForeignKeyQueryResult = row.into();
+                debug_print!("{:?}", result);
+                result
+            })
+            .collect();
+        for references in parse_foreign_key_query_results(foreign_key_results) {
+            results.push(Constraint::References(references));
+        }
 
         results.iter().for_each(|_index| {
             debug_print!("{:?}", _index);
