@@ -15,10 +15,6 @@ pub enum PgConstraint {
     ConfRelId,
     #[iden = "contype"]
     ConType,
-    #[iden = "conkey"]
-    ConKey,
-    #[iden = "confkey"]
-    ConfKey,
     #[iden = "confupdtype"]
     ConfUpdType,
     #[iden = "confdeltype"]
@@ -52,8 +48,14 @@ impl SchemaQueryBuilder {
             // `confupdtype` / `confdeltype` are the internal `"char"` type; cast to
             // text so the single-character action code decodes as a string, then map
             // it to a `ForeignKeyAction` while parsing.
-            .expr_as(Expr::cust("pg_constraint.confupdtype::text"), "on_update")
-            .expr_as(Expr::cust("pg_constraint.confdeltype::text"), "on_delete")
+            .expr_as(
+                Expr::col((PgConstraint::Table, PgConstraint::ConfUpdType)).cast_as(Text),
+                "on_update",
+            )
+            .expr_as(
+                Expr::col((PgConstraint::Table, PgConstraint::ConfDelType)).cast_as(Text),
+                "on_delete",
+            )
             .from(PgConstraint::Table)
             .join_as(
                 JoinType::Join,
@@ -154,3 +156,6 @@ impl From<RusqliteRow> for ForeignKeyQueryResult {
         Self::default()
     }
 }
+
+#[derive(Iden)]
+struct Text;

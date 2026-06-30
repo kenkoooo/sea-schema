@@ -3,23 +3,44 @@ use crate::postgres::{def::*, query::ForeignKeyQueryResult};
 /// Assumed to be ordered by constraint name, then the foreign key column's
 /// ordinal position, so rows of one foreign key are consecutive.
 pub fn parse_foreign_key_query_results(results: Vec<ForeignKeyQueryResult>) -> Vec<References> {
-    let mut output: Vec<References> = Vec::new();
+    let mut output = Vec::new();
+    let mut results = results.into_iter();
+    let mut curr = None;
 
-    for result in results {
-        match output.last_mut() {
-            Some(references) if references.name == result.constraint_name => {
-                references.columns.push(result.column_name);
-                references.foreign_columns.push(result.foreign_column_name);
+    loop {
+        let result = if let Some(result) = curr.take() {
+            result
+        } else if let Some(result) = results.next() {
+            result
+        } else {
+            break;
+        };
+
+        let constraint_name = result.constraint_name;
+        let table = result.foreign_table_name;
+        let on_update = parse_referential_action(result.on_update);
+        let on_delete = parse_referential_action(result.on_delete);
+        let mut columns = vec![result.column_name];
+        let mut foreign_columns = vec![result.foreign_column_name];
+
+        for result in results.by_ref() {
+            if result.constraint_name != constraint_name {
+                curr = Some(result);
+                break;
             }
-            _ => output.push(References {
-                name: result.constraint_name,
-                columns: vec![result.column_name],
-                table: result.foreign_table_name,
-                foreign_columns: vec![result.foreign_column_name],
-                on_update: parse_referential_action(result.on_update),
-                on_delete: parse_referential_action(result.on_delete),
-            }),
+
+            columns.push(result.column_name);
+            foreign_columns.push(result.foreign_column_name);
         }
+
+        output.push(References {
+            name: constraint_name,
+            columns,
+            table,
+            foreign_columns,
+            on_update,
+            on_delete,
+        });
     }
 
     output
