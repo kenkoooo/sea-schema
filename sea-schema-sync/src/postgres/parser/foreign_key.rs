@@ -46,8 +46,6 @@ pub fn parse_foreign_key_query_results(results: Vec<ForeignKeyQueryResult>) -> V
     output
 }
 
-/// Map a `pg_constraint.confupdtype` / `confdeltype` action code to a
-/// [`ForeignKeyAction`].
 fn parse_referential_action(code: Option<String>) -> Option<ForeignKeyAction> {
     match code.as_deref() {
         Some("a") => Some(ForeignKeyAction::NoAction),
