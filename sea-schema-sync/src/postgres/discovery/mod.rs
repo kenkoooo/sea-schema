@@ -186,9 +186,9 @@ impl SchemaDiscovery {
             })
             .collect();
 
-        // Checks, primary keys and uniques come from `information_schema`;
-        // foreign keys are discovered from `pg_constraint` (below), which keeps
-        // the local-to-referenced column pairing intact even when the key
+        // Checks and primary keys come from `information_schema`; foreign keys
+        // are discovered from `pg_constraint` (below), which keeps the
+        // local-to-referenced column pairing intact even when the key
         // references a bare unique index.
         let mut results = parse_table_constraint_query_results(results);
 

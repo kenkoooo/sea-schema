@@ -121,10 +121,7 @@ impl SchemaQueryBuilder {
             )
             .cond_where(
                 Condition::all()
-                    .add(
-                        Expr::col((PgConstraint::Table, PgConstraint::ConType))
-                            .eq(Expr::cust("'f'")),
-                    )
+                    .add(Expr::col((PgConstraint::Table, PgConstraint::ConType)).eq("f"))
                     .add(Expr::col((nsp, PgNamespace::NspName)).eq(schema.to_string()))
                     .add(Expr::col((tbl, PgClass::RelName)).eq(table.to_string())),
             )
