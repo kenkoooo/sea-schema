@@ -1,4 +1,3 @@
-use crate::Name;
 use crate::postgres::{def::*, query::ForeignKeyQueryResult};
 
 /// Assumed to be ordered by constraint name, then the foreign key column's
@@ -17,13 +16,26 @@ pub fn parse_foreign_key_query_results(results: Vec<ForeignKeyQueryResult>) -> V
                 columns: vec![result.column_name],
                 table: result.foreign_table_name,
                 foreign_columns: vec![result.foreign_column_name],
-                on_update: ForeignKeyAction::from_str(&result.on_update.unwrap_or_default()),
-                on_delete: ForeignKeyAction::from_str(&result.on_delete.unwrap_or_default()),
+                on_update: parse_referential_action(result.on_update),
+                on_delete: parse_referential_action(result.on_delete),
             }),
         }
     }
 
     output
+}
+
+/// Map a `pg_constraint.confupdtype` / `confdeltype` action code to a
+/// [`ForeignKeyAction`].
+fn parse_referential_action(code: Option<String>) -> Option<ForeignKeyAction> {
+    match code.as_deref() {
+        Some("a") => Some(ForeignKeyAction::NoAction),
+        Some("r") => Some(ForeignKeyAction::Restrict),
+        Some("c") => Some(ForeignKeyAction::Cascade),
+        Some("n") => Some(ForeignKeyAction::SetNull),
+        Some("d") => Some(ForeignKeyAction::SetDefault),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -41,8 +53,8 @@ mod tests {
             column_name: column.to_owned(),
             foreign_table_name: foreign_table.to_owned(),
             foreign_column_name: foreign_column.to_owned(),
-            on_update: Some("NO ACTION".to_owned()),
-            on_delete: Some("CASCADE".to_owned()),
+            on_update: Some("a".to_owned()),
+            on_delete: Some("c".to_owned()),
         }
     }
 

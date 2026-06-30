@@ -202,9 +202,9 @@ impl SchemaDiscovery {
         let mut results = parse_table_constraint_query_results(results);
 
         let foreign_key_rows = conn
-            .query_all_raw(
+            .query_all(
                 self.query
-                    .query_table_references(&schema.to_string(), &table.to_string()),
+                    .query_table_references(schema.clone(), table.clone()),
             )
             .await?;
         let foreign_key_results = foreign_key_rows

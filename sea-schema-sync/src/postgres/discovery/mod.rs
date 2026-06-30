@@ -192,9 +192,9 @@ impl SchemaDiscovery {
         // references a bare unique index.
         let mut results = parse_table_constraint_query_results(results);
 
-        let foreign_key_rows = conn.query_all_raw(
+        let foreign_key_rows = conn.query_all(
             self.query
-                .query_table_references(&schema.to_string(), &table.to_string()),
+                .query_table_references(schema.clone(), table.clone()),
         )?;
         let foreign_key_results = foreign_key_rows
             .into_iter()
